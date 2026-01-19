@@ -1,6 +1,8 @@
 // src/modules/Estadisticas/Estadisticas.js
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import jsPDF from 'jspdf'; // Importamos jsPDF
+import html2canvas from 'html2canvas'; // Importamos html2canvas
 import './Estadisticas.css';
 
 const Estadisticas = () => {
@@ -48,16 +50,44 @@ const Estadisticas = () => {
     return 'Pendiente';
   };
 
+  // NUEVA FUNCIÓN PARA EXPORTAR A PDF
+  const exportarPDF = async () => {
+    const elemento = document.getElementById('reporte-estadisticas'); // ID del contenedor a capturar
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const nombreArchivo = `Estadisticas ${fechaHoy}.pdf`;
+
+    const canvas = await html2canvas(elemento, {
+      scale: 2, // Aumenta la resolución para mejor calidad del PDF
+      useCORS: true, // Importante si hay imágenes de otras fuentes
+      logging: false // Deshabilita los logs de html2canvas en consola
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    
+    // Calcula las dimensiones para que la imagen ocupe todo el ancho del PDF sin perder proporción
+    const imgWidth = 210; // Ancho A4 en mm
+    const pageHeight = canvas.height * imgWidth / canvas.width;
+    
+    const pdf = new jsPDF('p', 'mm', 'a4'); // 'p' (portrait), 'mm' (unidades), 'a4' (formato)
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, pageHeight);
+    pdf.save(nombreArchivo);
+  };
+
   if (loading) return <div className="stats-loader">Analizando datos...</div>;
 
   return (
-    <div className="stats-view">
+    // Agregamos el ID 'reporte-estadisticas' al contenedor principal para que html2canvas lo pueda capturar
+    <div className="stats-view" id="reporte-estadisticas">
       <header className="stats-header">
         <div>
           <h1>Análisis de Rendimiento</h1>
           <p>Visión general de la empresa y cumplimiento de objetivos.</p>
         </div>
-        <button onClick={fetchStats} className="btn-refresh">🔄 Actualizar Datos</button>
+        <div className="header-actions"> {/* Contenedor para los botones */}
+          <button onClick={fetchStats} className="btn-refresh">🔄 Actualizar</button>
+          {/* BOTÓN DE DESCARGA PDF */}
+          <button onClick={exportarPDF} className="btn-download">📥 Descargar PDF</button>
+        </div>
       </header>
 
       <div className="stats-grid">
